@@ -8,6 +8,8 @@ local _dm = include 'device_manager/lib/device_manager' -- install from https://
 
 engine.name = 'PolyPerc'
 
+message_count = 0
+
 function init()
     message = SCRIPT_NAME
     device_manager = _dm.new({adv=false, debug=false})
@@ -22,12 +24,24 @@ function screen_redraw_clock()
     screen_drawing.time=0.1
     screen_drawing.count=-1
     screen_drawing.event=function()
+        if message_count>0 then
+            message_count=message_count-1
+        else
+            message = SCRIPT_NAME
+            screen_dirty = true
+        end
         if screen_dirty == true then
             redraw()
             screen_dirty = false
         end
     end
     screen_drawing:start()
+end
+
+function set_message(msg, count)
+    message = msg
+    message_count = count and count or 8
+    screen_dirty = true
 end
 
 function grid_redraw_clock()
@@ -51,7 +65,7 @@ function enc(e, d)
 end
 
 function turn(e, d)
-    message = "encoder " .. e .. ", delta " .. d
+    set_message("encoder " .. e .. ", delta " .. d)
 end
 
 function key(k, z)
@@ -62,7 +76,7 @@ function key(k, z)
 end
 
 function press_down(i)
-    message = "press down " .. i
+    set_message("press down " .. i)
 end
 
 function redraw()
@@ -82,8 +96,7 @@ function redraw()
 end
 
 function midi_event_note_on(d)
-    message = d.note
-    screen_dirty = true
+    set_message(d.note)
 end
 
 function midi_event_note_off(d) end

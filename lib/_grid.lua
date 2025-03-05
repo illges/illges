@@ -46,9 +46,9 @@ function _grid:grid_key(x,y,z)
     self.momentary[x][y] = on and 1 or 0
 
     if on then
-      
+      set_message(x..', '..y.." : ON")
     else
-
+      set_message(x..', '..y.." : OFF", 4)
     end
 
     screen_dirty = true

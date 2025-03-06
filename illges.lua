@@ -1,10 +1,11 @@
--- illges' default norns script
+-- illges' default norns script template
 
 ---@diagnostic disable: undefined-global, lowercase-global, duplicate-set-field
 
 SCRIPT_NAME = "illges"
 local _grid = include 'lib/_grid'
-local _dm = include 'device_manager/lib/device_manager' -- install from https://github.com/illges/device_manager
+local _dm = include 'device_manager/lib/_device_manager' -- install from https://github.com/illges/device_manager
+local _pacifist = include 'pacifist_dev/lib/_pacifist' -- install from https://github.com/illges/pacifist_dev
 
 engine.name = 'PolyPerc'
 
@@ -12,9 +13,12 @@ message_count = 0
 
 function init()
     message = SCRIPT_NAME
-    device_manager = _dm.new({adv=false, debug=false})
+    dm = _dm.new({adv=false, debug=false})
+    mft = _pacifist:new({devices=dm.devices, debug=false})
     g=_grid:new()
 
+    screen_dirty = true
+    grid_dirty = true
     screen_redraw_clock()
     grid_redraw_clock()
 end
@@ -49,8 +53,10 @@ function grid_redraw_clock()
     grid_drawing.time=0.1
     grid_drawing.count=-1
     grid_drawing.event=function()
+        mft:activity_countdown()
         if grid_dirty == true then
             g:grid_redraw()
+            redraw_mft()
             grid_dirty = false
         end
     end
@@ -95,6 +101,59 @@ function redraw()
     screen.update()
 end
 
+function redraw_mft()
+    --mft:all(0)
+    for i=1,16 do
+        mft:led(i, mft.color[i]) --color is optional
+        mft:send(i, mft.ind[i])
+    end
+end
+
+function mft_enc(n,d)
+    set_message("mft enc "..n.." turned")
+    mft.last_turned = n
+    mft.enc_activity_count = 15
+    mft.activity_count = 15
+    mft:delta_color(n,d)
+    if n<9 then
+        mft.ind[n] = util.clamp(mft.ind[n]+d,0,127)
+    else
+        mft.ind[n] = util.wrap(mft.ind[n]+d,0,127)
+    end
+    screen_dirty = true
+    grid_dirty=true
+end
+
+function mft_key(n,z)
+    local on = z==1
+    mft.momentary[n] = on and 1 or 0
+    if on then
+        set_message("mft key "..n.." pressed")
+        mft.last_pressed = n
+        mft.key_activity_count = 15
+        mft.activity_count = 15
+        if n>=1 and n<=4 then
+            mft:set_color(n,64)
+        elseif n>=5 and n<=8 then
+            mft:toggle_color(n,1,64)
+        elseif n>=9 and n<=16 then
+            mft:delta_color(n,10)
+        elseif n==17 then
+        elseif n==18 then
+        elseif n==19 then
+        elseif n==20 then
+        elseif n==21 then
+        elseif n==22 then
+        end
+    else
+        if n>=1 and n<=4 then
+            mft:toggle_color(n,1)
+        end
+    end
+    screen_dirty = true
+    grid_dirty=true
+end
+
 function midi_event_note_on(d)
     set_message(d.note)
 end
@@ -112,6 +171,5 @@ function r() ----------------------------- execute r() in the repl to quickly re
 end
 
 function cleanup() --------------- cleanup() is automatically called on script close
-    clock.cancel(redraw_clock_id) -- melt our clock vie the id we noted
-    clock.cancel(grid_redraw_clock_id) -- melt our clock vie the id we noted
+
 end
